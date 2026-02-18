@@ -80,6 +80,23 @@ The GPT-OSS model uses OpenAI's Harmony format. When formatting simple conversat
 - Formatted as system/user/assistant conversations
 - Token counts typically 550-1100 per example with 2048 max_seq_length
 
+### Qwen3-Specific Notes
+
+- **Chat template**: Qwen3 uses ChatML format — `<|im_start|>role\n` ... `<|im_end|>`
+- **`enable_thinking` parameter**: Pass to `apply_chat_template()` instead of `reasoning_effort`
+  - `enable_thinking=False` for training and standard chat inference
+  - `enable_thinking=True` for reasoning/thinking mode at inference
+- **Empty `<think>` tags**: Even with `enable_thinking=False`, Qwen3's template adds `<think>\n\n</think>` before the response in training data — this is expected behavior
+- **Response boundary tokens** for `train_on_responses_only()`:
+  - `instruction_part = "<|im_start|>user\n"`
+  - `response_part = "<|im_start|>assistant\n"`
+- **Inference settings** (Qwen3 team recommendations):
+  - Chat mode: `temperature=0.7, top_p=0.8, top_k=20`
+  - Thinking mode: `temperature=0.6, top_p=0.95, top_k=20`
+- **Kernel name**: Notebook metadata must use `"name": "python3"` (not `".finetuning"`) — only `python3`, `daytrader`, and `unsloth` kernels are registered on this machine
+- **Batch size**: Qwen3-14B (4-bit, ~10.4 GB) leaves more headroom than GPT-OSS 20B, enabling `per_device_train_batch_size=2`
+- **Training results** (1 epoch, Jordan Peterson books): ~321 steps, ~23 min, loss 2.44, peak VRAM 13.42 GB
+
 ### Comparison Notebook Design Patterns
 
 - Both models are evaluated sequentially (can't fit two 20B models on 24GB simultaneously)
