@@ -60,6 +60,12 @@ Each fine-tuning notebook follows this general workflow:
 
 ### Comparison Workflow
 
+#### Claude Prompt
+
+The comparison prompt submitted to Claude Opus 4.6:
+
+    Create a notebook that compares the performance of the "unsloth/gpt-oss-20b-unsloth-bnb-4bit" base model and the model fine tuned on the 4 books from Jordan Peterson. Use whatever quantitative measurements are available that will be able to visually display how the fine tuned model is more Jordan Peterson like than the base model. Be detailed in your explanations and provide visuals. 
+
 The comparison notebook measures domain adaptation across six independent axes:
 
 | Metric | What It Measures |
