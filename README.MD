@@ -28,7 +28,8 @@ The project uses a `uv`-managed Python 3.12 virtual environment (`.finetuning`) 
 
 | Notebook | Model | Data Source | Description |
 |----------|-------|-------------|-------------|
-| [GPT-OSS 20B Jordan Peterson](NoteBooks/JordanPeterson/GPT_OSS_20B_JordanPeterson_FineTuning.ipynb) | `unsloth/gpt-oss-20b-unsloth-bnb-4bit` | Jordan Peterson's books (4 PDFs) | Fine-tunes GPT-OSS 20B using LoRA on text extracted from Peterson's writings. Covers PDF extraction, dataset creation, training, inference, and model saving. |
+| [GPT-OSS 20B Jordan Peterson — Fine-Tuning](NoteBooks/JordanPeterson/GPT_OSS_20B_JordanPeterson_FineTuning.ipynb) | `unsloth/gpt-oss-20b-unsloth-bnb-4bit` | Jordan Peterson's books (4 PDFs) | Fine-tunes GPT-OSS 20B using LoRA on text extracted from Peterson's writings. Covers PDF extraction, dataset creation, training, inference, and model saving. |
+| [GPT-OSS 20B Jordan Peterson — Comparison](NoteBooks/JordanPeterson/GPT_OSS_20B_JordanPeterson_Comparison.ipynb) | Base vs. fine-tuned | Same 4 PDFs (held-out passages) | Quantitative comparison between the base and fine-tuned models across 6 metrics (perplexity, TF-IDF similarity, keyword density, TTR, response length, word clouds) with 7 visualizations. |
 
 ## Project Structure
 
@@ -45,7 +46,9 @@ FineTuning/
 
 ## Approach
 
-Each notebook follows this general workflow:
+### Fine-Tuning Workflow
+
+Each fine-tuning notebook follows this general workflow:
 
 1. **Extract text** from source PDFs using PyMuPDF
 2. **Create a training dataset** by chunking text into passages and formatting as conversations
@@ -54,6 +57,21 @@ Each notebook follows this general workflow:
 5. **Train** using `SFTTrainer` with response-only masking
 6. **Test** the fine-tuned model with relevant prompts
 7. **Save** the LoRA adapters for later use
+
+### Comparison Workflow
+
+The comparison notebook measures domain adaptation across six independent axes:
+
+| Metric | What It Measures |
+|--------|-----------------|
+| **Perplexity** | How surprised the model is by Peterson's actual prose (lower = better) |
+| **TF-IDF Cosine Similarity** | Vocabulary overlap between responses and real Peterson passages |
+| **Keyword Density** | Frequency of Peterson's characteristic terms (chaos, order, meaning, hero…) |
+| **Type-Token Ratio** | Vocabulary richness — fraction of unique words per response |
+| **Response Length** | Average words per response (Peterson is verbose) |
+| **Word Cloud** | Visual of which words dominate each model's responses |
+
+Both models are loaded and evaluated sequentially (memory constraint: two 20B models can't fit in 24GB simultaneously). Results are cached to `comparison_cache/` as pickle files so inference only runs once.
 
 ## References
 

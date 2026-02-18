@@ -79,3 +79,13 @@ The GPT-OSS model uses OpenAI's Harmony format. When formatting simple conversat
 - Chunked into ~350-word passages with 50-word overlap
 - Formatted as system/user/assistant conversations
 - Token counts typically 550-1100 per example with 2048 max_seq_length
+
+### Comparison Notebook Design Patterns
+
+- Both models are evaluated sequentially (can't fit two 20B models on 24GB simultaneously)
+- Results are pickled to `comparison_cache/` between phases to avoid re-running inference
+- Cache check at start of each model phase: if pkl exists, skip inference entirely
+- `compute_text_stats()` must always append one value per text — never skip empty responses — or per-prompt plots will have length mismatches
+- `compute_tfidf_similarity()` handles empty responses (returns 0.0) for fairness
+- Fine-tuned model trained for 1 epoch (loss=3.01) produces mostly empty greedy-decode responses; this is expected and reflected honestly in the charts
+- Key packages for analysis: `matplotlib`, `seaborn`, `wordcloud`, `nltk`, `scikit-learn`, `scipy`

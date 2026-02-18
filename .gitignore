@@ -9,6 +9,9 @@ Books/
 # Executed notebooks (contain large outputs)
 **/*_executed.ipynb
 
+# Comparison notebook intermediate cache (pkl files — regenerated automatically)
+**/comparison_cache/
+
 # Python cache
 __pycache__/
 *.pyc
