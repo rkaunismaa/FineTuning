@@ -54,7 +54,7 @@ cd NoteBooks/JordanPeterson
   --output <name>_executed.ipynb <name>.ipynb
 ```
 
-The kernel name in notebooks is set to `.finetuning`.
+The kernel name in notebooks must be set to `python3` in the notebook JSON metadata — `.finetuning` is NOT a registered kernel on this machine.
 
 ## Git Conventions
 
