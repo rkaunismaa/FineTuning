@@ -31,6 +31,7 @@ The project uses a `uv`-managed Python 3.12 virtual environment (`.finetuning`) 
 | [GPT-OSS 20B Jordan Peterson — Fine-Tuning](NoteBooks/JordanPeterson/GPT_OSS_20B_JordanPeterson_FineTuning.ipynb) | `unsloth/gpt-oss-20b-unsloth-bnb-4bit` | Jordan Peterson's books (4 PDFs) | Fine-tunes GPT-OSS 20B using LoRA on text extracted from Peterson's writings. Covers PDF extraction, dataset creation, training, inference, and model saving. |
 | [GPT-OSS 20B Jordan Peterson — Comparison](NoteBooks/JordanPeterson/GPT_OSS_20B_JordanPeterson_Comparison.ipynb) | Base vs. fine-tuned | Same 4 PDFs (held-out passages) | Quantitative comparison between the base and fine-tuned models across 6 metrics (perplexity, TF-IDF similarity, keyword density, TTR, response length, word clouds) with 7 visualizations. |
 | [Qwen3-14B Jordan Peterson — Fine-Tuning](NoteBooks/JordanPeterson/Qwen3_14B_JordanPeterson_FineTuning.ipynb) | `unsloth/Qwen3-14B-unsloth-bnb-4bit` | Jordan Peterson's books (4 PDFs) | Fine-tunes Qwen3-14B using LoRA. Demonstrates Qwen3's ChatML format, `enable_thinking` parameter, and dual inference modes (chat + thinking). ~23 min training, loss 2.44. |
+| [Qwen3-14B Jordan Peterson — Comparison](NoteBooks/JordanPeterson/Qwen3_14B_JordanPeterson_Comparison.ipynb) | Base vs. fine-tuned | Same 4 PDFs (held-out passages) | Quantitative comparison of Qwen3-14B base vs. fine-tuned across 6 metrics. Perplexity drops 33% (strong domain adaptation); other metrics reflect 1-epoch training artifacts. 7 visualizations. |
 
 ## Project Structure
 

@@ -11,6 +11,7 @@ Books/
 
 # Comparison notebook intermediate cache (pkl files — regenerated automatically)
 **/comparison_cache/
+**/comparison_cache_qwen3/
 
 # Python cache
 __pycache__/
