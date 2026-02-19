@@ -150,3 +150,20 @@ Key files:
 - Existing single-model pkl files are format-compatible and can be copied to bootstrap the cache
 - Two separate inference wrappers: `generate_response_gptoss()` and `generate_response_qwen3()`
 - To add a new model variant (e.g. V2 fine-tuned): update `MODEL_KEYS`, `MODEL_PATHS`, `MODEL_COLORS`, and delete the relevant pkl to force re-inference
+
+### Qwen3-32B Fine-Tuning Notebook
+
+`Qwen3_32B_JordanPeterson_FineTuning.ipynb` — scales the V2 synthetic Q&A approach to the 32B dense model:
+- **VRAM budget**: 32B in 4-bit = ~17.6 GB weights alone; peak target < 24 GB
+- **Conservative settings**: `max_seq_length=1024` (vs 2048), `batch_size=1` (vs 2), `grad_accum=8` (effective batch=8, same as V2)
+- **LoRA**: r=32, alpha=32 — same as V2
+- **Epochs**: 3 — same as V2
+- **Shared Q&A cache**: reuses `./qa_dataset/peterson_qa.jsonl` from V2 (no regeneration needed)
+- **OOM handler**: catches `RuntimeError` containing "out of memory" or "cuda"; prints three explicit fallback options:
+  1. Reduce `max_seq_length` to 768 and retry
+  2. Switch to `unsloth/Qwen3-30B-A3B-bnb-4bit` (MoE, lighter but less style-consistent)
+  3. Fall back to Qwen3-14B V2
+- **Pre-load VRAM check**: warns if free VRAM < 17 GB before model load
+- **Output**: `./outputs/qwen3_32b_peterson_lora/`
+- **Why dense over MoE**: Qwen3-30B-A3B routes tokens to different experts — inconsistent style learning. Dense 32B applies the same weights to every token, making consistent stylistic imitation easier.
+- **Conclusions cell**: exact code snippet for adding 32B to `AllModels_JordanPeterson_Comparison.ipynb`
