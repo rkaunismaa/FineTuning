@@ -92,15 +92,35 @@ Centralises PDF extraction and Q&A generation into one reusable notebook:
   - Tier 1: page with chapter-1 marker + ≥150 words + no chapter-2 marker
   - Tier 2: first page with ≥200 words after the last copyright/publisher page
   - Tier 3: no-op — start from page 0
+- **Back-matter removal**: searches last 30% of book for index/endnotes/bibliography
+  - Signal 1: ≥5 page-range patterns (`78–102`) AND numeric token density > 5%
+    (density check prevents false positives from biblical verse ranges in We Who Wrestle)
+  - Signal 2: numeric token density > 40% (unambiguous index pages)
+  - Header: ≤30-word page containing `Index`, `Bibliography`, or `References`
+  - `extract_chunks()` now takes pages `[start_page:end_page]` (both ends clipped)
+  - `extract_chunks()` returns 4 values: `(chunks, front_skip, back_skip, total_pages)`
 - **Backend**: `"local"` (default, free) or `"anthropic"` (paid API) — set in config
 - **Local model**: `unsloth/Qwen3-4B-unsloth-bnb-4bit` by default (~2.5 GB VRAM, ~45 min)
 - **Cache-aware**: skips generation if `qa_dataset/peterson_qa.jsonl` is ≥90% complete
 - **Cleanup**: unloads the generation model and frees VRAM before exiting
 
-Key regexes (in `peterson_config.json` indirectly; defined in notebook):
+Key regexes (defined in notebook):
 - `_CHAPTER1_RE`: matches "Chapter 1", "Rule 1", "Rule I", "Overture", "Cain and Abel"
 - `_CHAPTER2_RE`: matches "Chapter 2", "Rule 2", "Rule II", "Noah" (TOC filter)
 - `_FRONTMATTER_RE`: matches ISBN, copyright, "All rights reserved", publisher domains
+- `_BACKMATTER_TITLE_RE`: matches "Index", "Bibliography", "References", "Further Reading"
+- `_PAGE_RANGE_RE`: matches page-range patterns like "78–102" or "234-5"
+
+**Validated back-matter cutoffs (2026-02-21):**
+| Book | Total pages | Content pages | Back skip | Trigger |
+|------|-------------|---------------|-----------|---------|
+| Maps of Meaning | 607 | 7–507 (82.5%) | 99 pages | Notes section (Signal 1) |
+| 12 Rules for Life | 403 | 19–372 (87.8%) | 30 pages | Endnotes section (Signal 1) |
+| Beyond Order | 388 | 10–316 (79.1%) | 71 pages | Notes section (Signal 1) |
+| We Who Wrestle | 640 | 8–564 (87.0%) | 75 pages | Notes section (Signal 1) |
+
+**Important**: the existing `qa_dataset/peterson_qa.jsonl` cache (V3 data) was generated
+WITHOUT back-matter removal and must be deleted before running DataPrep for V4 training.
 
 ### GPT-OSS Chat Template
 
