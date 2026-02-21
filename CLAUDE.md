@@ -8,10 +8,17 @@ This repository explores fine-tuning large language models using [Unsloth](https
 
 ```
 FineTuning/
-├── Books/                  # Source training data (PDFs, gitignored)
-│   └── JordanPeterson/     # Jordan Peterson's books (4 PDFs)
-├── NoteBooks/              # Jupyter notebooks for fine-tuning
-│   └── JordanPeterson/     # Fine-tuning on Peterson's writings
+├── Books/                          # Source training data (PDFs, gitignored)
+│   └── JordanPeterson/             # Jordan Peterson's books (4 PDFs)
+├── NoteBooks/
+│   └── JordanPeterson/
+│       ├── peterson_config.json    # All tunable params (paths, chunk sizes, backend)
+│       ├── JordanPeterson_DataPrep.ipynb       # Step 1: extract + Q&A generation
+│       ├── Qwen3_14B_JordanPeterson_V2_FineTuning.ipynb
+│       ├── Qwen3_32B_JordanPeterson_FineTuning.ipynb
+│       ├── AllModels_JordanPeterson_Comparison.ipynb
+│       └── qa_dataset/             # Q&A cache (gitignored)
+│           └── peterson_qa.jsonl
 ├── .gitignore
 ├── CLAUDE.md               # This file
 └── README.MD
@@ -43,7 +50,15 @@ uv pip install <package> --python /home/rob/PythonEnvironments/FineTuning/.finet
 
 ## Notebooks
 
-Notebooks are in `NoteBooks/` organized by data source. Each notebook is self-contained and runs top-to-bottom.
+Notebooks are in `NoteBooks/` organized by data source.
+
+### Notebook Execution Order (Jordan Peterson pipeline)
+
+1. **`JordanPeterson_DataPrep.ipynb`** — Run this first. Extracts PDF text (with front-matter removal), generates Q&A pairs, writes `qa_dataset/peterson_qa.jsonl`.
+2. **`Qwen3_14B_JordanPeterson_V2_FineTuning.ipynb`** — Fine-tunes Qwen3-14B on the cached Q&A pairs.
+3. **`Qwen3_32B_JordanPeterson_FineTuning.ipynb`** — Fine-tunes Qwen3-32B on the same cache.
+
+Each fine-tuning notebook is also self-contained and runs top-to-bottom.
 
 ### Running notebooks
 
@@ -65,6 +80,24 @@ The kernel name in notebooks must be set to `python3` in the notebook JSON metad
 - Do not commit training outputs, checkpoints, or model weights
 
 ## Key Technical Details
+
+### Data Preparation Notebook (`JordanPeterson_DataPrep.ipynb`)
+
+Centralises PDF extraction and Q&A generation into one reusable notebook:
+- **Config**: reads all parameters from `peterson_config.json` (paths, chunk sizes, backend)
+- **Front-matter removal**: 3-tier heuristic skips publisher pages before Chapter 1
+  - Tier 1: page with chapter-1 marker + ≥150 words + no chapter-2 marker
+  - Tier 2: first page with ≥200 words after the last copyright/publisher page
+  - Tier 3: no-op — start from page 0
+- **Backend**: `"local"` (default, free) or `"anthropic"` (paid API) — set in config
+- **Local model**: `unsloth/Qwen3-4B-unsloth-bnb-4bit` by default (~2.5 GB VRAM, ~45 min)
+- **Cache-aware**: skips generation if `qa_dataset/peterson_qa.jsonl` is ≥90% complete
+- **Cleanup**: unloads the generation model and frees VRAM before exiting
+
+Key regexes (in `peterson_config.json` indirectly; defined in notebook):
+- `_CHAPTER1_RE`: matches "Chapter 1", "Rule 1", "Rule I", "Overture", "Cain and Abel"
+- `_CHAPTER2_RE`: matches "Chapter 2", "Rule 2", "Rule II", "Noah" (TOC filter)
+- `_FRONTMATTER_RE`: matches ISBN, copyright, "All rights reserved", publisher domains
 
 ### GPT-OSS Chat Template
 

@@ -1,0 +1,20 @@
+{
+  "version": "1",
+  "paths": {
+    "books_dir": "../../Books/JordanPeterson",
+    "qa_cache":  "./qa_dataset/peterson_qa.jsonl"
+  },
+  "extraction": {
+    "chunk_words":     350,
+    "overlap_words":   50,
+    "min_chunk_words": 100
+  },
+  "generation": {
+    "questions_per_passage": 2,
+    "max_new_tokens":        150,
+    "backend":               "local",
+    "local_model":           "unsloth/Qwen3-4B-unsloth-bnb-4bit",
+    "anthropic_model":       "claude-haiku-4-5-20251001"
+  },
+  "system_prompt": "You are an AI assistant that has been trained on the complete works of Jordan B. Peterson, a Canadian clinical psychologist, professor, and author. You speak with deep knowledge of psychology, philosophy, mythology, religion, and personal responsibility. Your responses reflect Peterson's writing style, intellectual depth, and interdisciplinary approach to understanding human nature and meaning."
+}
