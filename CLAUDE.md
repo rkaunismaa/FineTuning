@@ -15,6 +15,7 @@ FineTuning/
 │       ├── peterson_config.json    # All tunable params (paths, chunk sizes, backend)
 │       ├── JordanPeterson_DataPrep.ipynb       # Step 1: extract + Q&A generation
 │       ├── Qwen3_14B_JordanPeterson_V2_FineTuning.ipynb
+│       ├── Qwen3_14B_JordanPeterson_V3_FineTuning.ipynb
 │       ├── Qwen3_32B_JordanPeterson_FineTuning.ipynb
 │       ├── AllModels_JordanPeterson_Comparison.ipynb
 │       └── qa_dataset/             # Q&A cache (gitignored)
@@ -55,8 +56,9 @@ Notebooks are in `NoteBooks/` organized by data source.
 ### Notebook Execution Order (Jordan Peterson pipeline)
 
 1. **`JordanPeterson_DataPrep.ipynb`** — Run this first. Extracts PDF text (with front-matter removal), generates Q&A pairs, writes `qa_dataset/peterson_qa.jsonl`.
-2. **`Qwen3_14B_JordanPeterson_V2_FineTuning.ipynb`** — Fine-tunes Qwen3-14B on the cached Q&A pairs.
-3. **`Qwen3_32B_JordanPeterson_FineTuning.ipynb`** — Fine-tunes Qwen3-32B on the same cache.
+2. **`Qwen3_14B_JordanPeterson_V2_FineTuning.ipynb`** — Fine-tunes Qwen3-14B on the cached Q&A pairs (5,029 pairs, V2 data — includes front matter).
+3. **`Qwen3_14B_JordanPeterson_V3_FineTuning.ipynb`** — Fine-tunes Qwen3-14B on the cleaner DataPrep cache (4,867 pairs, no front matter). Output: `outputs/qwen3_14b_peterson_v3_lora/`.
+4. **`Qwen3_32B_JordanPeterson_FineTuning.ipynb`** — Fine-tunes Qwen3-32B on the same cache.
 
 Each fine-tuning notebook is also self-contained and runs top-to-bottom.
 
@@ -130,15 +132,59 @@ Key files:
 
 **Why this matters**: the training task now matches the inference task (answer a question) rather than teaching the model to continue passages. This is the root fix for the passage-regurgitation problem observed in V1.
 
+### V3 Fine-Tuning: Cleaner DataPrep Dataset
+
+`Qwen3_14B_JordanPeterson_V3_FineTuning.ipynb` — fine-tuning only (no dataset generation).
+
+- Reads from `qa_dataset/peterson_qa.jsonl` produced by `JordanPeterson_DataPrep.ipynb`
+- Dataset: **4,867 pairs** (vs V2's 5,029) — front-matter pages removed by DataPrep heuristic
+- Same hyperparameters as V2: r=32, alpha=32, 3 epochs, 2e-4 LR
+- Output: `outputs/qwen3_14b_peterson_v3_lora/` (does NOT overwrite V2)
+- Adapter size: 513.9 MB (identical to V2 — same r=32 architecture)
+
+**Actual V3 results (run 2026-02-21):**
+- Steps: 1,827 | Loss: 1.5258 | Time: 136.9 min | Peak VRAM: 15.3 GB
+- Loss is +0.02 vs V2 (1.5058) — negligible, within noise; fewer training pairs means slightly
+  less gradient signal but the difference is immaterial
+
+**Actual dataset reduction (different from predicted):**
+| Book | V2 pairs | V3 pairs | Δ |
+|------|----------|----------|---|
+| Maps of Meaning | 1,826 | 1,821 | -5 |
+| We Who Wrestle with God | 1,367 | 1,264 | **-103** |
+| 12 Rules for Life | 974 | 926 | -48 |
+| Beyond Order | 862 | 856 | -6 |
+
+The biggest reduction was in We Who Wrestle (-103), not Maps of Meaning (-5) as predicted.
+Maps of Meaning's front matter was shorter than expected by the DataPrep heuristic.
+
+**Inference quality (5 eval prompts, greedy decoding):**
+- Q1, Q3, Q4, Q5: Substantive philosophical passages in Peterson's voice — content-appropriate
+  but still passage-like rather than directly answering the question
+- **Q2 produced raw index text** ("143–74 and Genesis story, 160–68 in Harry Potter series,
+  259–60…") — confirms that back-matter content (index pages) is still present in the training
+  data; front-matter removal alone does not eliminate this contamination
+- The sample training example in Part 4 showed a figure-list entry ("FIGURES 1 The Domain
+  and Constituent Elements of the Known 15 2 The Metamythological Cycle of the Way 17…")
+  — figure lists within the book body are not touched by front-matter removal
+
+**V3 conclusion:** Nearly identical to V2 in both training metrics and inference quality.
+The front-matter fix improved dataset purity but the remaining noise (figure lists, indexes)
+suggests that a back-matter removal step is the next highest-leverage data improvement.
+
 ### V2 vs V1 Hyperparameter Comparison
 
-| Parameter | V1 | V2 | Reason |
-|-----------|----|----|--------|
-| Training data | Passage completion | Synthetic Q&A | Fixes regurgitation |
-| Epochs | 1 | 3 | Crosses memorisation → generalisation |
-| LoRA rank | r=16 | r=32 | 2× adapter capacity for style |
-| LoRA alpha | 16 | 32 | Maintains alpha/rank = 1.0 |
-| Effective batch | 8 (2×4) | 8 (2×4) | Already optimal |
+| Parameter | V1 | V2 | V3 |
+|-----------|----|----|-----|
+| Training data | Passage completion | Synthetic Q&A (w/ front matter) | Synthetic Q&A (front-matter removed) |
+| Q&A pairs | N/A | 5,029 | 4,867 |
+| Steps | 321 | 1,887 | 1,827 |
+| Loss | 2.44 | 1.5058 | 1.5258 |
+| Time | 23.3 min | 144.0 min | 136.9 min |
+| Peak VRAM | 13.4 GB | 15.5 GB | 15.3 GB |
+| Epochs | 1 | 3 | 3 |
+| LoRA rank | r=16 | r=32 | r=32 |
+| Adapter size | ~260 MB | 513.9 MB | 513.9 MB |
 
 ### Q&A Generation with Claude API
 

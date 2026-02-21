@@ -12,7 +12,7 @@
   "generation": {
     "questions_per_passage": 2,
     "max_new_tokens":        150,
-    "backend":               "local",
+    "backend":               "anthropic",
     "local_model":           "unsloth/Qwen3-4B-unsloth-bnb-4bit",
     "anthropic_model":       "claude-haiku-4-5-20251001"
   },
