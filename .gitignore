@@ -13,6 +13,7 @@ Books/
 **/comparison_cache/
 **/comparison_cache_qwen3/
 **/comparison_cache_all_models/
+**/comparison_cache_qwen3_versions/
 **/qa_dataset/
 
 # Python cache
