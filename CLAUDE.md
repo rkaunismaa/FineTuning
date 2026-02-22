@@ -278,11 +278,28 @@ better than V3 despite the lower step count.
 
 ### All-Models Comparison Notebook
 
-`AllModels_JordanPeterson_Comparison.ipynb` compares all 4 variants (GPT-OSS base/tuned + Qwen3 base/tuned) side by side:
-- Uses `comparison_cache_all_models/` with files named `{key}_results.pkl` (e.g. `qwen3_tuned_results.pkl`)
+`AllModels_JordanPeterson_Comparison.ipynb` compares all 5 variants (GPT-OSS base/tuned + Qwen3 base/V1/V4) side by side:
+- Uses `comparison_cache_all_models/` with files named `{key}_results.pkl` (e.g. `qwen3_v4_results.pkl`)
 - Existing single-model pkl files are format-compatible and can be copied to bootstrap the cache
 - Two separate inference wrappers: `generate_response_gptoss()` and `generate_response_qwen3()`
-- To add a new model variant (e.g. V2 fine-tuned): update `MODEL_KEYS`, `MODEL_PATHS`, `MODEL_COLORS`, and delete the relevant pkl to force re-inference
+- To add a new model variant: update `MODEL_KEYS`, `MODEL_PATHS`, `MODEL_COLORS`, and delete the relevant pkl to force re-inference
+- V4 added by `/tmp/add_v4_to_allmodels_comparison.py` (2026-02-22)
+
+**Actual results (run 2026-02-22):**
+
+| Metric | GPT-OSS Base | GPT-OSS FT | Qwen3 Base | Qwen3 V1 | Qwen3 V4 |
+|--------|-------------|-----------|-----------|---------|---------|
+| Avg Perplexity | 31.09 | 15.29 | 19.36 | 12.94 | **11.27** |
+| Avg TF-IDF Sim | 0.0511 | 0.0090 | **0.0607** | 0.0535 | 0.0374 |
+| Avg Keyword Density | 3.54% | 0.73% | **4.19%** | 3.30% | 1.79% |
+| Avg TTR | **0.769** | 0.051 | 0.661 | 0.380 | 0.629 |
+| Avg Response Length | 181 w | 55 w | 204 w | 250 w | 238 w |
+
+**Key conclusions:**
+- Qwen3 V4 achieves lowest perplexity of all 5 models (11.27) — strongest domain adaptation
+- GPT-OSS fine-tuned is the weakest variant (mostly empty responses after 1 epoch at loss 3.01)
+- TF-IDF/keyword density decrease with Qwen3 fine-tuning — verbatim retrieval vs structured summaries
+- Qwen3 V4 TTR (0.629) recovers substantially vs V1 (0.380) — cleaner data improves lexical diversity
 
 ### Qwen3 All-Versions Comparison Notebook
 
