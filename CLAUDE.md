@@ -197,19 +197,46 @@ suggests that a back-matter removal step is the next highest-leverage data impro
 V2 — 3 of 10 prompts (Q2, Q6, Q7) trigger raw index output vs 1 in V2. Removing front matter
 without removing back matter shifted the proportion of back-matter pages upward in the corpus.
 
-### V2 vs V1 Hyperparameter Comparison
+### V4 Fine-Tuning: Front + Back-Matter Removed
 
-| Parameter | V1 | V2 | V3 |
-|-----------|----|----|-----|
-| Training data | Passage completion | Synthetic Q&A (w/ front matter) | Synthetic Q&A (front-matter removed) |
-| Q&A pairs | N/A | 5,029 | 4,867 |
-| Steps | 321 | 1,887 | 1,827 |
-| Loss | 2.44 | 1.5058 | 1.5258 |
-| Time | 23.3 min | 144.0 min | 136.9 min |
-| Peak VRAM | 13.4 GB | 15.5 GB | 15.3 GB |
-| Epochs | 1 | 3 | 3 |
-| LoRA rank | r=16 | r=32 | r=32 |
-| Adapter size | ~260 MB | 513.9 MB | 513.9 MB |
+`Qwen3_14B_JordanPeterson_V4_FineTuning.ipynb` — fine-tuning only (no dataset generation).
+
+- Reads from `qa_dataset/peterson_qa.jsonl` produced by the updated DataPrep notebook
+- Dataset: **3,936 pairs from 1,968 passages** — both front-matter AND back-matter removed
+- Same hyperparameters as V3: r=32, alpha=32, 3 epochs, 2e-4 LR
+- Output: `outputs/qwen3_14b_peterson_v4_lora/` (does NOT overwrite V3)
+- Adapter size: 513.9 MB (identical to V3 — same r=32 architecture)
+
+**Actual V4 results (run 2026-02-21):**
+- Steps: 1,476 | Loss: 1.6421 | Time: 98.0 min | Peak VRAM: 13.9 GB
+- Loss is +0.11 vs V3 (1.5258) — expected with smaller dataset; fewer easy-to-memorize citation pages
+
+**V4 inference quality (5 eval prompts, greedy decoding):**
+- **0/5 prompts trigger index output** — the primary goal achieved (V3 had 3/5)
+- All 5 responses are substantive Peterson prose passages relevant to the prompt
+- Still in retrieval mode (verbatim passage reproduction), but no index contamination
+- Q2 contains a minor garbled encoding artifact (`³´Á¾²°»`) from a Beyond Order PDF encoding issue
+- Residual: Maps of Meaning figure list still present as first chunk (~3 pairs of 3,936)
+
+**V4 conclusion:** Back-matter removal directly eliminated index contamination. The higher loss
+(1.6421 vs V3's 1.5258) is expected — the removed back-matter pages were citation-dense and
+easy to over-fit. Fewer steps (1,476 vs 1,827) also contributed. Inference quality is clearly
+better than V3 despite the lower step count.
+
+### Hyperparameter Comparison Across All Versions
+
+| Parameter | V1 | V2 | V3 | V4 |
+|-----------|----|----|----|----|
+| Training data | Passage completion | Synthetic Q&A (w/ front matter) | Synthetic Q&A (front-matter removed) | Synthetic Q&A (front+back-matter removed) |
+| Q&A pairs | N/A | 5,029 | 4,867 | **3,936** |
+| Steps | 321 | 1,887 | 1,827 | **1,476** |
+| Loss | 2.44 | 1.5058 | 1.5258 | **1.6421** |
+| Time | 23.3 min | 144.0 min | 136.9 min | **98.0 min** |
+| Peak VRAM | 13.4 GB | 15.5 GB | 15.3 GB | **13.9 GB** |
+| Epochs | 1 | 3 | 3 | **3** |
+| LoRA rank | r=16 | r=32 | r=32 | **r=32** |
+| Adapter size | ~260 MB | 513.9 MB | 513.9 MB | **513.9 MB** |
+| Index output (5 prompts) | — | 1/5 | 3/5 | **0/5** |
 
 ### Q&A Generation with Claude API
 
