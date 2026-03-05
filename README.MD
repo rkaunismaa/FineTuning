@@ -37,6 +37,7 @@ The project uses a `uv`-managed Python 3.12 virtual environment (`.finetuning`) 
 | [Qwen3-32B Jordan Peterson — Fine-Tuning](NoteBooks/JordanPeterson/Qwen3_32B_JordanPeterson_FineTuning.ipynb) | `unsloth/Qwen3-32B-unsloth-bnb-4bit` | Synthetic Q&A pairs from 4 PDFs (shared cache with V2) | Scales the V2 approach to Qwen3's 32B dense model. Uses conservative VRAM settings (max_seq_length=1024, batch_size=1, grad_accum=8) to fit within 24 GB. Includes pre-load VRAM check, OOM handler with fallback options, and a conclusions section with instructions for adding 32B to the AllModels comparison. |
 | [Qwen3-14B Jordan Peterson — Fine-Tuning V3](NoteBooks/JordanPeterson/Qwen3_14B_JordanPeterson_V3_FineTuning.ipynb) | `unsloth/Qwen3-14B-unsloth-bnb-4bit` | Cleaner Q&A cache from DataPrep notebook (4,867 pairs, front-matter removed) | Version 3: standalone fine-tuning notebook (no dataset generation). Trains on the DataPrep notebook's cleaner Q&A cache. Same hyperparameters as V2 (r=32, 3 epochs). Results: 1,827 steps, loss 1.5258, 136.9 min, 15.3 GB peak VRAM. |
 | [Qwen3-14B Jordan Peterson — Fine-Tuning V4](NoteBooks/JordanPeterson/Qwen3_14B_JordanPeterson_V4_FineTuning.ipynb) | `unsloth/Qwen3-14B-unsloth-bnb-4bit` | Cleanest Q&A cache from DataPrep notebook (3,936 pairs, front+back-matter removed) | Version 4: trains on the DataPrep notebook's cleanest cache with both front-matter AND back-matter (indexes, endnotes, bibliography) removed. Results: 1,476 steps, loss 1.6421, 98.0 min, 13.9 GB peak VRAM. 0/5 eval prompts trigger index output (V3 had 3/5) — back-matter removal directly confirmed effective. |
+| [Qwen3.5-27B Jordan Peterson — Fine-Tuning](NoteBooks/JordanPeterson/Qwen3_5_27B_JordanPeterson_FineTuning.ipynb) | `unsloth/Qwen3.5-27B` | V4 Q&A cache (3,936 pairs, front+back-matter removed) | Fine-tunes Qwen3.5-27B, a hybrid architecture (Gated DeltaNet + full attention, 64 layers). Loads via `FastVisionModel` with vision layers frozen. Uses batch_size=1, grad_accum=8 to fit within 24 GB VRAM. OOM handler with fallback to Qwen3.5-9B. Requires unsloth>=2026.3.3 and transformers>=5.3.0. |
 | [Qwen3-14B All Versions — Comparison](NoteBooks/JordanPeterson/Qwen3_14B_AllVersions_JordanPeterson_Comparison.ipynb) | Base vs V1 vs V2 vs V3 vs V4 | Same 4 PDFs (held-out passages) | Compares all five Qwen3-14B checkpoints side by side. Answers whether Q&A training (V1→V2), front-matter cleanup (V2→V3), and back-matter removal (V3→V4) produce measurable improvements. 8 visualizations including a version-progression line chart. Key finding: back-matter removal eliminated index contamination (3/10 → 0/10 prompts); cleaner data improves TF-IDF and TTR despite 931 fewer training pairs. |
 
 ## Project Structure
@@ -132,6 +133,28 @@ uses two signals: (1) ≥5 page-range patterns AND numeric density > 5%; (2) num
 are substantive Peterson prose. Back-matter removal directly confirmed effective. Still in
 verbatim-retrieval mode — none of the fine-tuned versions truly answers questions.
 
+#### Qwen3.5-27B — New Architecture (Hybrid Linear + Full Attention)
+
+Qwen3.5 (Feb 2026) introduces a fundamentally different architecture from Qwen3.
+The 27B variant is the largest that fits on the RTX 4090:
+
+1. **Run DataPrep** to generate `qa_dataset/peterson_qa.jsonl` (same V4 cache)
+2. **Load** via `FastVisionModel` (all Qwen3.5 models are VLMs)
+3. **Apply LoRA** with `finetune_vision_layers=False`, `finetune_language_layers=True`
+4. **Train** with `batch_size=1`, `grad_accum=8` (VRAM constrained), same r=32, 3 epochs
+5. **Save** adapter to `outputs/qwen3_5_27b_peterson_lora/`
+
+**Key architecture differences from Qwen3:**
+- 64 layers: 48 linear attention (Gated DeltaNet, O(n) complexity) + 16 full attention
+- Hidden dim 5120 (vs 4096), 24 attention heads, 4 KV heads
+- Vision encoder included (frozen for text-only training)
+- Same ChatML template (`<|im_start|>` / `<|im_end|>`)
+
+**VRAM estimate**: ~17 GB weights (4-bit) + ~3-5 GB training = ~20-22 GB peak.
+OOM fallback: `unsloth/Qwen3.5-9B` (6.5 GB 4-bit, fits easily).
+
+**Library requirements**: `unsloth>=2026.3.3`, `transformers>=5.3.0`.
+
 ### All-Versions Comparison Results (Base vs V1 vs V2 vs V3 vs V4)
 
 A full side-by-side evaluation of all four Qwen3-14B checkpoints across 10 evaluation prompts
@@ -222,6 +245,7 @@ Both models are loaded and evaluated sequentially (memory constraint: two 20B mo
 | Qwen3-14B V2 | Synthetic Q&A (5,029 pairs, w/ front matter) | 3 | 1,887 | 144.0 min | 1.5058 | 15.5 GB | 513.9 MB |
 | Qwen3-14B V3 | Synthetic Q&A (4,867 pairs, front-matter removed) | 3 | 1,827 | 136.9 min | 1.5258 | 15.3 GB | 513.9 MB |
 | Qwen3-14B V4 | Synthetic Q&A (3,936 pairs, front+back-matter removed) | 3 | 1,476 | 98.0 min | 1.6421 | 13.9 GB | 513.9 MB |
+| Qwen3.5-27B | Synthetic Q&A (3,936 pairs, V4 cache) | 3 | TBD | TBD | TBD | ~20–22 GB est. | TBD |
 | Qwen3-32B | Synthetic Q&A (shared cache) | 3 | TBD | TBD | TBD | ~20–22 GB est. | TBD |
 
 ## References
