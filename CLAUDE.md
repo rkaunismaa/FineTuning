@@ -18,7 +18,8 @@ FineTuning/
 │       ├── Qwen3_14B_JordanPeterson_V3_FineTuning.ipynb
 │       ├── Qwen3_14B_JordanPeterson_V4_FineTuning.ipynb
 │       ├── Qwen3_32B_JordanPeterson_FineTuning.ipynb
-│       ├── Qwen3_5_27B_JordanPeterson_FineTuning.ipynb
+│       ├── Qwen3_5_27B_JordanPeterson_FineTuning.ipynb  # OOM on 4090 — use 9B instead
+│       ├── Qwen3_5_9B_JordanPeterson_FineTuning.ipynb
 │       ├── AllModels_JordanPeterson_Comparison.ipynb
 │       ├── Qwen3_14B_AllVersions_JordanPeterson_Comparison.ipynb  # Qwen3 base/v1/v2/v3/v4
 │       └── qa_dataset/             # Q&A cache (gitignored)
@@ -63,7 +64,7 @@ Notebooks are in `NoteBooks/` organized by data source.
 3. **`Qwen3_14B_JordanPeterson_V3_FineTuning.ipynb`** — Fine-tunes Qwen3-14B on the cleaner DataPrep cache (4,867 pairs, no front matter). Output: `outputs/qwen3_14b_peterson_v3_lora/`.
 4. **`Qwen3_14B_JordanPeterson_V4_FineTuning.ipynb`** — Fine-tunes Qwen3-14B on the cleanest cache (3,936 pairs, front+back-matter removed). Output: `outputs/qwen3_14b_peterson_v4_lora/`.
 5. **`Qwen3_32B_JordanPeterson_FineTuning.ipynb`** — Fine-tunes Qwen3-32B on the same cache.
-6. **`Qwen3_5_27B_JordanPeterson_FineTuning.ipynb`** — Fine-tunes Qwen3.5-27B (hybrid linear+full attention architecture) on the same V4 cache.
+6. **`Qwen3_5_9B_JordanPeterson_FineTuning.ipynb`** — Fine-tunes Qwen3.5-9B (hybrid linear+full attention architecture) on the same V4 cache. Output: `outputs/qwen3_5_9b_peterson_lora/`.
 
 Each fine-tuning notebook is also self-contained and runs top-to-bottom.
 
@@ -366,17 +367,19 @@ checkpoints (Base, V1, V2, V3, V4) side by side. Answers four research questions
 - **Why dense over MoE**: Qwen3-30B-A3B routes tokens to different experts — inconsistent style learning. Dense 32B applies the same weights to every token, making consistent stylistic imitation easier.
 - **Conclusions cell**: exact code snippet for adding 32B to `AllModels_JordanPeterson_Comparison.ipynb`
 
-### Qwen3.5-27B Fine-Tuning Notebook
+### Qwen3.5 Fine-Tuning Notebooks
 
-`Qwen3_5_27B_JordanPeterson_FineTuning.ipynb` — fine-tunes Qwen3.5-27B on the V4 Q&A cache:
-- **Architecture**: Hybrid Gated DeltaNet (48 linear attention layers) + full attention (16 layers), 64 layers total, hidden_size=5120, 24 attn heads, 4 KV heads
+**`Qwen3_5_27B_JordanPeterson_FineTuning.ipynb`** — attempted 27B but **OOM on RTX 4090**.
+The 27B model at 4-bit requires ~17 GB for weights alone; training overhead pushes it past 24 GB.
+
+**`Qwen3_5_9B_JordanPeterson_FineTuning.ipynb`** — fine-tunes Qwen3.5-9B on the V4 Q&A cache:
+- **Architecture**: Hybrid Gated DeltaNet (24 linear attention layers) + full attention (8 layers), 32 layers total, hidden_size=4096, 16 attn heads, 4 KV heads
 - **VLM**: All Qwen3.5 models are vision-language models; loads via `FastVisionModel`, tokenizer accessed via `processor.tokenizer`
 - **Text-only LoRA**: `finetune_vision_layers=False`, `finetune_language_layers=True`, `finetune_attention_modules=True`, `finetune_mlp_modules=True`
-- **VRAM budget**: ~17 GB weights (4-bit) + ~3-5 GB training overhead; `batch_size=1`, `grad_accum=8` (effective batch=8)
+- **VRAM budget**: ~8.5 GB weights (4-bit) + ~3-4 GB training overhead; `batch_size=2`, `grad_accum=4` (effective batch=8)
 - **LoRA**: r=32, alpha=32 — same as Qwen3-14B V4
 - **Epochs**: 3, same data (3,936 pairs)
 - **Chat template**: ChatML (`<|im_start|>` / `<|im_end|>`), identical to Qwen3
-- **OOM handler**: prints fallback options including `unsloth/Qwen3.5-9B` (6.5 GB 4-bit, fits easily)
-- **Output**: `./outputs/qwen3_5_27b_peterson_lora/`
+- **Output**: `./outputs/qwen3_5_9b_peterson_lora/`
 - **Library updates required**: `unsloth>=2026.3.3`, `transformers>=5.3.0` (for `qwen3_5` model type support)
 - **Optional**: `flash-linear-attention` + `causal-conv1d` for faster linear attention (falls back to torch implementation without them)
