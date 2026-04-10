@@ -20,7 +20,9 @@ FineTuning/
 │       ├── Qwen3_32B_JordanPeterson_FineTuning.ipynb
 │       ├── Qwen3_5_27B_JordanPeterson_FineTuning.ipynb  # OOM on 4090 — use 9B instead
 │       ├── Qwen3_5_9B_JordanPeterson_FineTuning.ipynb
-│       ├── AllModels_JordanPeterson_Comparison.ipynb
+│       ├── Gemma4_E4B_JordanPeterson_FineTuning.ipynb
+│       ├── AllModels_JordanPeterson_Comparison.ipynb      # 5-model (no Gemma 4)
+│       ├── AllModels_JordanPeterson_Comparison_V2.ipynb   # 6-model (adds Gemma 4 E4B)
 │       ├── Qwen3_14B_AllVersions_JordanPeterson_Comparison.ipynb  # Qwen3 base/v1/v2/v3/v4
 │       └── qa_dataset/             # Q&A cache (gitignored)
 │           └── peterson_qa.jsonl
@@ -38,9 +40,9 @@ FineTuning/
 
 ### Key packages
 
-- `unsloth` 2026.3.3 - Fast fine-tuning library (2x speedup, VRAM reduction)
+- `unsloth` 2026.3.3 (→ upgrade to ≥2026.4.x for Gemma 4) - Fast fine-tuning library (2x speedup, VRAM reduction)
 - `torch` - PyTorch with CUDA 12.8
-- `transformers` 5.3.0 - HuggingFace model loading and tokenization
+- `transformers` 5.3.0 (→ upgrade to ≥5.5.0 for Gemma 4) - HuggingFace model loading and tokenization
 - `trl` - SFTTrainer for supervised fine-tuning
 - `peft` - LoRA adapter management
 - `datasets` - HuggingFace dataset handling
@@ -65,6 +67,7 @@ Notebooks are in `NoteBooks/` organized by data source.
 4. **`Qwen3_14B_JordanPeterson_V4_FineTuning.ipynb`** — Fine-tunes Qwen3-14B on the cleanest cache (3,936 pairs, front+back-matter removed). Output: `outputs/qwen3_14b_peterson_v4_lora/`.
 5. **`Qwen3_32B_JordanPeterson_FineTuning.ipynb`** — Fine-tunes Qwen3-32B on the same cache.
 6. **`Qwen3_5_9B_JordanPeterson_FineTuning.ipynb`** — Fine-tunes Qwen3.5-9B (hybrid linear+full attention architecture) on the same V4 cache. Output: `outputs/qwen3_5_9b_peterson_lora/`.
+7. **`Gemma4_E4B_JordanPeterson_FineTuning.ipynb`** — Fine-tunes Gemma 4 E4B on the same V4 cache using the `FastModel` API. **Run the upgrade cell first** (upgrades unsloth + transformers for Gemma 4 support), then restart the kernel. Output: `outputs/gemma4_e4b_peterson_v1_lora/`.
 
 Each fine-tuning notebook is also self-contained and runs top-to-bottom.
 
@@ -279,14 +282,17 @@ better than V3 despite the lower step count.
 - Fine-tuned model trained for 1 epoch (loss=3.01) produces mostly empty greedy-decode responses; this is expected and reflected honestly in the charts
 - Key packages for analysis: `matplotlib`, `seaborn`, `wordcloud`, `nltk`, `scikit-learn`, `scipy`
 
-### All-Models Comparison Notebook
+### All-Models Comparison Notebooks
 
-`AllModels_JordanPeterson_Comparison.ipynb` compares all 5 variants (GPT-OSS base/tuned + Qwen3 base/V1/V4) side by side:
+**`AllModels_JordanPeterson_Comparison.ipynb`** — 5-model comparison (GPT-OSS base/tuned + Qwen3 base/V1/V4). Kept for reference; superseded by V2.
+
+**`AllModels_JordanPeterson_Comparison_V2.ipynb`** — 6-model comparison adding Gemma 4 E4B:
 - Uses `comparison_cache_all_models/` with files named `{key}_results.pkl` (e.g. `qwen3_v4_results.pkl`)
 - Existing single-model pkl files are format-compatible and can be copied to bootstrap the cache
-- Two separate inference wrappers: `generate_response_gptoss()` and `generate_response_qwen3()`
-- To add a new model variant: update `MODEL_KEYS`, `MODEL_PATHS`, `MODEL_COLORS`, and delete the relevant pkl to force re-inference
-- V4 added by `/tmp/add_v4_to_allmodels_comparison.py` (2026-02-22)
+- Three separate inference wrappers: `generate_response_gptoss()`, `generate_response_qwen3()`, `generate_response_gemma4()`
+- `generate_response_gemma4()`: uses `tokenizer.apply_chat_template(..., tokenize=True, return_tensors="pt")` — single step (no two-step like Qwen3, no return_dict like GPT-OSS)
+- To add a further model variant: update `MODEL_KEYS`, `MODEL_PATHS`, `MODEL_COLORS`, `SYSTEM_PROMPTS`; add named variables in the inference cell; update the aggregate cell and summary table cell
+- V4 added by `/tmp/add_v4_to_allmodels_comparison.py` (2026-02-22); Gemma 4 E4B added 2026-04-10
 
 **Actual results (run 2026-02-22):**
 
@@ -366,6 +372,31 @@ checkpoints (Base, V1, V2, V3, V4) side by side. Answers four research questions
 - **Output**: `./outputs/qwen3_32b_peterson_lora/`
 - **Why dense over MoE**: Qwen3-30B-A3B routes tokens to different experts — inconsistent style learning. Dense 32B applies the same weights to every token, making consistent stylistic imitation easier.
 - **Conclusions cell**: exact code snippet for adding 32B to `AllModels_JordanPeterson_Comparison.ipynb`
+
+### Gemma 4 Fine-Tuning Notebook
+
+`Gemma4_E4B_JordanPeterson_FineTuning.ipynb` — fine-tunes Gemma 4 E4B on the V4 Q&A cache:
+
+- **Requires library upgrade before first run** (Cell 2 handles this; restart kernel after):
+  ```bash
+  uv pip install --upgrade unsloth unsloth-zoo "transformers>=5.5.0"
+  ```
+  Current installed: unsloth 2026.3.3, transformers 5.3.0 — neither supports Gemma 4.
+- **API**: `FastModel` (not `FastLanguageModel` or `FastVisionModel`)
+  - `FastModel.from_pretrained(...)` → `(model, tokenizer)` directly
+  - `FastModel.get_peft_model(...)` with `finetune_language_layers=True, finetune_vision_layers=False`
+  - `FastModel.for_inference(model)` for inference mode
+- **Chat format**: `<start_of_turn>user / <start_of_turn>model` (same tokens as Gemma 3)
+  - System prompt is prepended to the first user turn by the template (not a separate role turn)
+  - `train_on_responses_only`: `instruction_part="<start_of_turn>user\n"`, `response_part="<start_of_turn>model\n"`
+  - No `enable_thinking` parameter
+- **LoRA**: r=16, alpha=16 (vs r=32 for 14B Qwen3; proportionally similar for ~4B effective params)
+- **Training settings**: `batch_size=1`, `grad_accum=8`, 3 epochs, 2e-4 LR
+- **Expected training loss**: **13–15** — this is normal for E2B/E4B MoE models, NOT a failure
+  - 26B/31B variants show 1–3; the discrepancy is architectural, not a quality indicator
+- **VRAM**: ~10 GB weights (4-bit), ~17 GB peak — fits RTX 4090 (24 GB) with ~7 GB headroom
+- **Output**: `./outputs/gemma4_e4b_peterson_v1_lora/`
+- **get_chat_template not needed**: the `-it` tokenizer already has the correct template built-in
 
 ### Qwen3.5 Fine-Tuning Notebooks
 
